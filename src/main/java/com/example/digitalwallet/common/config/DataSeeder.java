@@ -27,5 +27,8 @@ public class DataSeeder implements CommandLineRunner {
 
         userService.createUser("ahmed", "ahmed@example.com");
         userService.createUser("sara", "sara@example.com");
+        userService.createUser("ali", "ali@example.com");
+        userService.createUser("omar", "omar@example.com");
+        userService.createUser("abdullah", "abdullah@example.com");
     }
 }

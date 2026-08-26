@@ -264,7 +264,6 @@ Transfers modify multiple records:
 Sender balance
 Receiver balance
 Sender ledger entry
-Receiver ledger entry
 ```
 
 These changes must be performed inside a single database transaction:
@@ -280,7 +279,8 @@ Validate sender balance
 Debit sender
 Credit receiver
 
-Create DEBIT ledger entry
+Create DEBIT ledger entryReceiver ledger entry
+
 Create CREDIT ledger entry
 
 COMMIT
