@@ -4,7 +4,6 @@ import com.example.digitalwallet.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -39,6 +38,10 @@ public class Wallet {
     public Wallet(User user) {
         this.user = user;
         this.balance = BigDecimal.ZERO;
+    }
+
+    public void credit(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
     }
 
     @PrePersist

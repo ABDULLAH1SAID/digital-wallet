@@ -423,3 +423,51 @@ Retrieves the current balance of a wallet.
 - **400 Bad Request** — `X-User-Id` header is missing.
 - **404 Not Found** — Wallet does not exist.
 - **403 Forbidden** — User does not own this wallet.
+
+### 3. Deposit Money
+
+Adds funds to the authenticated user's wallet. The wallet is resolved from `X-User-Id` (one wallet per user).
+
+- **Method:** `POST`
+- **URL:** `/wallets/deposit`
+
+#### Headers
+
+| Header            | Required | Description                                              |
+| ----------------- | -------- | -------------------------------------------------------- |
+| `Content-Type`    | Yes      | `application/json`                                       |
+| `X-User-Id`       | Yes      | ID of the wallet owner                                   |
+| `Idempotency-Key` | Yes      | Client-generated unique string (UUID recommended)        |
+
+#### Request Body
+
+```json
+{
+  "amount": 500.00
+}
+```
+
+#### Success Response
+
+**201 Created** (first request) or **200 OK** (idempotent replay)
+
+```json
+{
+  "transactionId": 101,
+  "walletId": 1,
+  "type": "CREDIT",
+  "amount": 500.00,
+  "balanceAfter": 1500.00,
+  "referenceId": "DEP-20260826-0001",
+  "status": "COMPLETED",
+  "createdAt": "2026-08-26T10:30:00Z"
+}
+```
+
+#### Errors
+
+- **400 Bad Request** — `amount` missing/zero/negative/invalid, or `Idempotency-Key` missing.
+- **401 Unauthorized** — `X-User-Id` header is missing or invalid.
+- **404 Not Found** — Wallet does not exist for this user.
+- **500 Internal Server Error** — Unexpected server error.
+

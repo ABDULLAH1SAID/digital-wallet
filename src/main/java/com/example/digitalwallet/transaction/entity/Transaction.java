@@ -14,6 +14,9 @@ import java.time.Instant;
         name = "transactions",
         indexes = {
                 @Index(name = "idx_transactions_wallet_created", columnList = "wallet_id, created_at DESC")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_transactions_idempotency_key", columnNames = "idempotency_key")
         }
 )
 @Getter
@@ -52,6 +55,9 @@ public class Transaction {
 
     @Column(length = 255)
     private String description;
+
+    @Column(name = "idempotency_key", length = 100)
+    private String idempotencyKey;
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
