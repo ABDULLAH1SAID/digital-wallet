@@ -392,7 +392,6 @@ Creates a new wallet for a user.
 
 * **400 Bad Request** — Invalid request data.
 * **401 Unauthorized** — `X-User-Id` header is missing or invalid.
-* **404 Not Found — User does not exist.
 * **409 Conflict** — Wallet already exists for this user.
 * **500 Internal Server Error** — Unexpected server error.
 
