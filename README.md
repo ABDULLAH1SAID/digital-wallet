@@ -395,3 +395,31 @@ Creates a new wallet for a user.
 * **409 Conflict** — Wallet already exists for this user.
 * **500 Internal Server Error** — Unexpected server error.
 
+### 2. Get Wallet Balance
+
+Retrieves the current balance of a wallet.
+
+- **Method:** GET
+- **URL:** `/wallets/{walletId}/balance`
+
+- **Path Parameters:**
+    - `walletId` (`Long`) — required
+
+- **Headers:**
+    - `X-User-Id: <userId>` — required
+
+- **Success Response:** `200 OK`
+
+  ```json
+  {
+    "walletId": 1,
+    "balance": 1250.00
+  }
+  
+
+#### Errors
+
+- **400 Bad Request** — Invalid `walletId`.
+- **400 Bad Request** — `X-User-Id` header is missing.
+- **404 Not Found** — Wallet does not exist.
+- **403 Forbidden** — User does not own this wallet.
