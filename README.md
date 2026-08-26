@@ -471,3 +471,66 @@ Adds funds to the authenticated user's wallet. The wallet is resolved from `X-Us
 - **404 Not Found** — Wallet does not exist for this user.
 - **500 Internal Server Error** — Unexpected server error.
 
+
+### 4. Transfer Money
+
+Transfers money from the authenticated user's wallet to another wallet. The sender wallet is resolved from `X-User-Id` (one wallet per user). Both ledger entries share the same `reference_id` and are committed atomically.
+
+- **Method:** `POST`
+- **URL:** `/transfers`
+
+#### Headers
+
+| Header            | Required | Description                                       |
+| ----------------- | -------- | ------------------------------------------------- |
+| `Content-Type`    | Yes      | `application/json`                                |
+| `X-User-Id`       | Yes      | ID of the sender                                  |
+| `Idempotency-Key` | Yes      | Client-generated unique string (UUID recommended) |
+
+#### Request Body
+
+```json
+{
+  "receiverWalletId": 2,
+  "amount": 100.00
+}
+```
+
+#### Success Response
+
+**201 Created** (first request) or **200 OK** (idempotent replay)
+
+```json
+{
+  "referenceId": "TX-20260826-A1B2C3D4",
+  "amount": 100.00,
+  "status": "COMPLETED",
+  "debit": {
+    "transactionId": 10,
+    "walletId": 1,
+    "type": "DEBIT",
+    "amount": 100.00,
+    "balanceAfter": 400.00,
+    "referenceId": "TX-20260826-A1B2C3D4",
+    "status": "COMPLETED",
+    "createdAt": "2026-08-26T10:30:00Z"
+  },
+  "credit": {
+    "transactionId": 11,
+    "walletId": 2,
+    "type": "CREDIT",
+    "amount": 100.00,
+    "balanceAfter": 100.00,
+    "referenceId": "TX-20260826-A1B2C3D4",
+    "status": "COMPLETED",
+    "createdAt": "2026-08-26T10:30:00Z"
+  }
+}
+```
+
+#### Errors
+
+- **400 Bad Request** — `amount` missing/zero/negative/invalid, `receiverWalletId` missing/invalid, same-wallet transfer, insufficient balance, or `Idempotency-Key` missing.
+- **401 Unauthorized** — `X-User-Id` header is missing or invalid.
+- **404 Not Found** — Sender or receiver wallet does not exist.
+- **500 Internal Server Error** — Unexpected server error. The whole operation is rolled back.

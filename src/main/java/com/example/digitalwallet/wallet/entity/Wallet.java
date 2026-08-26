@@ -1,5 +1,6 @@
 package com.example.digitalwallet.wallet.entity;
 
+import com.example.digitalwallet.common.exception.InsufficientBalanceException;
 import com.example.digitalwallet.user.entity.User;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -42,6 +43,13 @@ public class Wallet {
 
     public void credit(BigDecimal amount) {
         this.balance = this.balance.add(amount);
+    }
+
+    public void debit(BigDecimal amount) {
+        if (this.balance.compareTo(amount) < 0) {
+            throw new InsufficientBalanceException();
+        }
+        this.balance = this.balance.subtract(amount);
     }
 
     @PrePersist
