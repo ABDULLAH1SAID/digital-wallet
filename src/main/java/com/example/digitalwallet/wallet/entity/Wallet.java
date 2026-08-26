@@ -12,7 +12,6 @@ import java.time.Instant;
 @Entity
 @Table(name = "wallets")
 @Getter
-@Setter
 @NoArgsConstructor
 public class Wallet {
 
