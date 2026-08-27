@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 13j7xYi3ib29edwRkwcnZaWjF8dp7AIhcugG7C9bjJbnHgo5FUwEioLYMxeaYNg
+\restrict NHPEkqQSQm0YRKxbbqnUTgmCOozThqAAgvJvndWauwzg3FgfxbA7bqw8bI6SKzL
 
 -- Dumped from database version 18.1
 -- Dumped by pg_dump version 18.1
@@ -76,6 +76,7 @@ CREATE TABLE public.transactions (
     created_at timestamp with time zone NOT NULL,
     idempotency_key character varying(100),
     operation character varying(20),
+    CONSTRAINT chk_transactions_amount_positive CHECK ((amount > (0)::numeric)),
     CONSTRAINT chk_transactions_operation CHECK (((operation IS NULL) OR ((operation)::text = ANY ((ARRAY['DEPOSIT'::character varying, 'TRANSFER'::character varying])::text[])))),
     CONSTRAINT chk_transactions_status CHECK (((status)::text = ANY ((ARRAY['COMPLETED'::character varying, 'PENDING'::character varying, 'FAILED'::character varying])::text[]))),
     CONSTRAINT chk_transactions_type CHECK (((type)::text = ANY ((ARRAY['CREDIT'::character varying, 'DEBIT'::character varying])::text[])))
@@ -149,7 +150,8 @@ CREATE TABLE public.wallets (
     user_id bigint NOT NULL,
     balance numeric(19,2) NOT NULL,
     created_at timestamp with time zone NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT chk_wallets_balance_non_negative CHECK ((balance >= (0)::numeric))
 );
 
 
@@ -207,6 +209,7 @@ COPY public.flyway_schema_history (installed_rank, version, description, type, s
 3	3	create transactions table	SQL	V3__create_transactions_table.sql	409835095	postgres	2026-08-26 14:36:01.020187	9	t
 4	4	add idempotency key to transactions	SQL	V4__add_idempotency_key_to_transactions.sql	-1815823165	postgres	2026-08-26 18:55:17.666601	938	t
 5	5	scope idempotency key	SQL	V5__scope_idempotency_key.sql	1948542416	postgres	2026-08-27 16:31:19.547958	2879	t
+6	6	add balance and amount checks	SQL	V6__add_balance_and_amount_checks.sql	-1757723850	postgres	2026-08-27 21:21:01.386685	478	t
 \.
 
 
@@ -379,5 +382,5 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 13j7xYi3ib29edwRkwcnZaWjF8dp7AIhcugG7C9bjJbnHgo5FUwEioLYMxeaYNg
+\unrestrict NHPEkqQSQm0YRKxbbqnUTgmCOozThqAAgvJvndWauwzg3FgfxbA7bqw8bI6SKzL
 
