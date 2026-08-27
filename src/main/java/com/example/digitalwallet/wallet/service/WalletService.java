@@ -5,6 +5,7 @@ import com.example.digitalwallet.common.exception.WalletAlreadyExistsException;
 import com.example.digitalwallet.common.exception.WalletNotFoundException;
 import com.example.digitalwallet.transaction.dto.TransactionResponse;
 import com.example.digitalwallet.transaction.entity.Transaction;
+import com.example.digitalwallet.transaction.entity.TransactionOperation;
 import com.example.digitalwallet.transaction.entity.TransactionStatus;
 import com.example.digitalwallet.transaction.entity.TransactionType;
 import com.example.digitalwallet.transaction.repository.TransactionRepository;
@@ -47,6 +48,7 @@ public class WalletService {
             throw new WalletAlreadyExistsException(userId);
         }
 
+
         Wallet wallet = new Wallet(user);
         Wallet savedWallet = walletRepository.save(wallet);
 
@@ -69,16 +71,20 @@ public class WalletService {
 
         String key = idempotencyKey.trim();
 
-        Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(key);
+        Wallet wallet = walletRepository.findByUserId(userId)
+                .orElseThrow(WalletNotFoundException::new);
+
+        Optional<Transaction> existing = transactionRepository
+                .findByWalletIdAndIdempotencyKeyAndOperation(
+                        wallet.getId(),
+                        key,
+                        TransactionOperation.DEPOSIT
+                );
         if (existing.isPresent()) {
             return new DepositResult(TransactionResponse.from(existing.get()), false);
         }
 
         validateAmount(request);
-
-        if (walletRepository.findByUserId(userId).isEmpty()) {
-            throw new WalletNotFoundException();
-        }
 
         TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
         try {
@@ -87,7 +93,12 @@ public class WalletService {
             );
             return new DepositResult(created, true);
         } catch (DataIntegrityViolationException ex) {
-            return transactionRepository.findByIdempotencyKey(key)
+            return transactionRepository
+                    .findByWalletIdAndIdempotencyKeyAndOperation(
+                            wallet.getId(),
+                            key,
+                            TransactionOperation.DEPOSIT
+                    )
                     .map(transaction -> new DepositResult(TransactionResponse.from(transaction), false))
                     .orElseThrow(() -> ex);
         }
@@ -108,6 +119,7 @@ public class WalletService {
         transaction.setCounterpartyWallet(null);
         transaction.setReferenceId(nextDepositReferenceId());
         transaction.setStatus(TransactionStatus.COMPLETED);
+        transaction.setOperation(TransactionOperation.DEPOSIT);
         transaction.setIdempotencyKey(idempotencyKey);
 
         Transaction saved = transactionRepository.saveAndFlush(transaction);

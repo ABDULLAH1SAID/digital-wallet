@@ -16,7 +16,10 @@ import java.time.Instant;
                 @Index(name = "idx_transactions_wallet_created", columnList = "wallet_id, created_at DESC")
         },
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_transactions_idempotency_key", columnNames = "idempotency_key")
+                @UniqueConstraint(
+                        name = "uk_transactions_wallet_operation_idempotency",
+                        columnNames = {"wallet_id", "operation", "idempotency_key"}
+                )
         }
 )
 @Getter
@@ -52,6 +55,10 @@ public class Transaction {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private TransactionStatus status;
+
+    @Enumerated(EnumType.STRING)
+    @Column(length = 20)
+    private TransactionOperation operation;
 
     @Column(length = 255)
     private String description;

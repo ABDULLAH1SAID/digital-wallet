@@ -8,6 +8,7 @@ import com.example.digitalwallet.transaction.dto.TransferRequest;
 import com.example.digitalwallet.transaction.dto.TransferResponse;
 import com.example.digitalwallet.transaction.dto.TransferResult;
 import com.example.digitalwallet.transaction.entity.Transaction;
+import com.example.digitalwallet.transaction.entity.TransactionOperation;
 import com.example.digitalwallet.transaction.entity.TransactionStatus;
 import com.example.digitalwallet.transaction.entity.TransactionType;
 import com.example.digitalwallet.transaction.repository.TransactionRepository;
@@ -42,15 +43,20 @@ public class TransferService {
 
         String key = idempotencyKey.trim();
 
-        Optional<Transaction> existing = transactionRepository.findByIdempotencyKey(key);
+        Wallet sender = walletRepository.findByUserId(userId)
+                .orElseThrow(WalletNotFoundException::new);
+
+        Optional<Transaction> existing = transactionRepository
+                .findByWalletIdAndIdempotencyKeyAndOperation(
+                        sender.getId(),
+                        key,
+                        TransactionOperation.TRANSFER
+                );
         if (existing.isPresent()) {
             return new TransferResult(toTransferResponse(existing.get()), false);
         }
 
         validateRequest(request);
-
-        Wallet sender = walletRepository.findByUserId(userId)
-                .orElseThrow(WalletNotFoundException::new);
 
         Wallet receiver = walletRepository.findById(request.receiverWalletId())
                 .orElseThrow(() -> new WalletNotFoundException(request.receiverWalletId()));
@@ -66,7 +72,12 @@ public class TransferService {
             );
             return new TransferResult(created, true);
         } catch (DataIntegrityViolationException ex) {
-            return transactionRepository.findByIdempotencyKey(key)
+            return transactionRepository
+                    .findByWalletIdAndIdempotencyKeyAndOperation(
+                            sender.getId(),
+                            key,
+                            TransactionOperation.TRANSFER
+                    )
                     .map(transaction -> new TransferResult(toTransferResponse(transaction), false))
                     .orElseThrow(() -> ex);
         }
@@ -102,6 +113,7 @@ public class TransferService {
         debit.setCounterpartyWallet(receiver);
         debit.setReferenceId(referenceId);
         debit.setStatus(TransactionStatus.COMPLETED);
+        debit.setOperation(TransactionOperation.TRANSFER);
         debit.setIdempotencyKey(idempotencyKey);
 
         Transaction credit = new Transaction();
