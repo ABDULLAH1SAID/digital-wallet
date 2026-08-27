@@ -16,7 +16,6 @@ import com.example.digitalwallet.wallet.dto.DepositResult;
 import com.example.digitalwallet.wallet.dto.WalletResponse;
 import com.example.digitalwallet.wallet.entity.Wallet;
 import com.example.digitalwallet.wallet.repository.WalletRepository;
-import com.example.digitalwallet.common.exception.WalletAccessDeniedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -57,11 +56,8 @@ public class WalletService {
     @Transactional(readOnly = true)
     public BalanceResponse getBalance(Long userId, Long walletId) {
         Wallet wallet = walletRepository.findById(walletId)
-                .orElseThrow(() -> new WalletNotFoundException(walletId));   // 404
-
-        if (!wallet.getUser().getId().equals(userId)) {
-            throw new WalletAccessDeniedException();                          // 403
-        }
+                .filter(w -> w.getUser().getId().equals(userId))
+                .orElseThrow(() -> new WalletNotFoundException(walletId));
 
         return new BalanceResponse(wallet.getId(), wallet.getBalance());
     }
