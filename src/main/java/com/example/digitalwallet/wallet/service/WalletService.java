@@ -48,11 +48,18 @@ public class WalletService {
             throw new WalletAlreadyExistsException(userId);
         }
 
-
-        Wallet wallet = new Wallet(user);
-        Wallet savedWallet = walletRepository.save(wallet);
-
-        return WalletResponse.from(savedWallet);
+        TransactionTemplate txTemplate = new TransactionTemplate(transactionManager);
+        try {
+            return txTemplate.execute(status -> {
+                Wallet savedWallet = walletRepository.saveAndFlush(new Wallet(user));
+                return WalletResponse.from(savedWallet);
+            });
+        } catch (DataIntegrityViolationException ex) {
+            if (walletRepository.existsByUserId(userId)) {
+                throw new WalletAlreadyExistsException(userId);
+            }
+            throw ex;
+        }
     }
 
     @Transactional(readOnly = true)

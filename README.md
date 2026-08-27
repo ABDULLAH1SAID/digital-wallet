@@ -16,6 +16,50 @@ The project aims to provide a robust foundation for handling digital wallet oper
 
 ---
 
+## 🛠️ Tech Stack
+
+* **Java 22**
+* **Spring Boot**
+* **Spring Data JPA / Hibernate**
+* **PostgreSQL**
+* **Maven**
+* **JUnit 5 / Mockito**
+* **REST API**
+
+---
+
+## 🚀 Running the Application
+
+Before running the application, make sure the required database environment variables are configured in your environment.
+
+### Required Environment Variables
+
+```env
+DB_URL=jdbc:postgresql://localhost:5432/digital_wallet
+DB_USERNAME=postgres
+DB_PASSWORD=your_password
+```
+
+> **Note:** These values must be available as environment variables when running the application..
+
+### Run the Application
+
+Start the Spring Boot application using Maven:
+
+```bash
+mvn spring-boot:run
+```
+
+### Run Tests
+
+Run the test suite using:
+
+```bash
+mvn test
+```
+
+---
+
 ## ⚙️ Functional Requirements
 
 ### 👤 User & Wallet Management
@@ -350,6 +394,34 @@ For **all endpoints**, send the following header:
 ```text
 X-User-Id: <userId>
 ```
+
+Missing, blank, non-numeric, or non-positive `X-User-Id` returns **401 Unauthorized**.
+
+Unknown user ids also return **401 Unauthorized** (`Invalid X-User-Id`).
+
+## Error Response
+
+All error responses use:
+
+```json
+{
+  "code": "WALLET_NOT_FOUND",
+  "message": "Wallet not found with id: 99"
+}
+```
+
+| HTTP | `code` | When |
+|---|---|---|
+| 400 | `INVALID_REQUEST` | Invalid amount, missing `Idempotency-Key`, same-wallet transfer, malformed JSON |
+| 400 | `VALIDATION_ERROR` | Bean-validation failures (`@Valid`, `@Positive`) |
+| 400 | `INSUFFICIENT_BALANCE` | Transfer amount exceeds sender balance |
+| 400 | `INVALID_PAGINATION` | Invalid `page`, `size`, or `sort` |
+| 400 | `INVALID_FILTER` | `type` is not `CREDIT` or `DEBIT` |
+| 401 | `UNAUTHORIZED` | Missing or invalid `X-User-Id` |
+| 404 | `WALLET_NOT_FOUND` | Wallet does not exist, or the caller does not own it |
+| 409 | `WALLET_ALREADY_EXISTS` | User already has a wallet |
+| 500 | `INTERNAL_SERVER_ERROR` | Unexpected failure (financial writes are rolled back) |
+
 ---
 
 ## Endpoints
@@ -358,8 +430,8 @@ X-User-Id: <userId>
 
 Creates a new wallet for a user.
 
-* **Method:** `POST`
-* **URL:** `/wallets`
+- **Method:** `POST`
+- **URL:** `/wallets`
 
 #### Headers
 
@@ -383,46 +455,50 @@ Creates a new wallet for a user.
   "id": 1,
   "userId": 1,
   "balance": 0.00,
-  "createdAt": "2025-01-15T10:30:00",
-  "updatedAt": "2025-01-15T10:30:00"
+  "createdAt": "2026-08-26T10:30:00Z",
+  "updatedAt": "2026-08-26T10:30:00Z"
 }
 ```
 
 #### Errors
 
-* **400 Bad Request** — Invalid request data.
-* **401 Unauthorized** — `X-User-Id` header is missing or invalid.
-* **409 Conflict** — Wallet already exists for this user.
-* **500 Internal Server Error** — Unexpected server error.
+- **401 Unauthorized** — `X-User-Id` header is missing or invalid.
+- **409 Conflict** — Wallet already exists for this user, including concurrent create requests.
+- **500 Internal Server Error** — Unexpected server error.
 
 ### 2. Get Wallet Balance
 
 Retrieves the current balance of a wallet.
 
-- **Method:** GET
+- **Method:** `GET`
 - **URL:** `/wallets/{walletId}/balance`
 
-- **Path Parameters:**
-    - `walletId` (`Long`) — required
+#### Path Parameters
 
-- **Headers:**
-    - `X-User-Id: <userId>` — required
+- `walletId` (`Long`) — required
 
-- **Success Response:** `200 OK`
+#### Headers
 
-  ```json
-  {
-    "walletId": 1,
-    "balance": 1250.00
-  }
-  
+- `X-User-Id: <userId>` — required
+
+#### Success Response
+
+**200 OK**
+
+```json
+{
+  "walletId": 1,
+  "balance": 1250.00
+}
+```
 
 #### Errors
 
 - **400 Bad Request** — Invalid `walletId`.
-- **400 Bad Request** — `X-User-Id` header is missing.
-- **404 Not Found** — Wallet does not exist.
-- **403 Forbidden** — User does not own this wallet.
+- **401 Unauthorized** — `X-User-Id` header is missing or invalid.
+- **404 Not Found** — Wallet does not exist, or the user does not own this wallet.
+
+> Ownership failures use `404` rather than `403` so wallet ids cannot be enumerated.
 
 ### 3. Deposit Money
 
@@ -433,11 +509,11 @@ Adds funds to the authenticated user's wallet. The wallet is resolved from `X-Us
 
 #### Headers
 
-| Header            | Required | Description                                              |
-| ----------------- | -------- | -------------------------------------------------------- |
-| `Content-Type`    | Yes      | `application/json`                                       |
-| `X-User-Id`       | Yes      | ID of the wallet owner                                   |
-| `Idempotency-Key` | Yes      | Client-generated unique string (UUID recommended)        |
+| Header            | Required | Description                                       |
+| ----------------- | -------- | ------------------------------------------------- |
+| `Content-Type`    | Yes      | `application/json`                                |
+| `X-User-Id`       | Yes      | ID of the wallet owner                            |
+| `Idempotency-Key` | Yes      | Client-generated unique string (UUID recommended) |
 
 #### Request Body
 
@@ -446,6 +522,8 @@ Adds funds to the authenticated user's wallet. The wallet is resolved from `X-Us
   "amount": 500.00
 }
 ```
+
+`amount` must be greater than zero and have at most 2 decimal places.
 
 #### Success Response
 
@@ -464,13 +542,14 @@ Adds funds to the authenticated user's wallet. The wallet is resolved from `X-Us
 }
 ```
 
+Replaying the same `Idempotency-Key` for the same wallet deposit returns the original transaction and does not credit the wallet again.
+
 #### Errors
 
 - **400 Bad Request** — `amount` missing/zero/negative/invalid, or `Idempotency-Key` missing.
 - **401 Unauthorized** — `X-User-Id` header is missing or invalid.
 - **404 Not Found** — Wallet does not exist for this user.
-- **500 Internal Server Error** — Unexpected server error.
-
+- **500 Internal Server Error** — Unexpected server error. The whole operation is rolled back.
 
 ### 4. Transfer Money
 
@@ -495,6 +574,8 @@ Transfers money from the authenticated user's wallet to another wallet. The send
   "amount": 100.00
 }
 ```
+
+`amount` must be greater than zero and have at most 2 decimal places.
 
 #### Success Response
 
@@ -528,9 +609,69 @@ Transfers money from the authenticated user's wallet to another wallet. The send
 }
 ```
 
+Replaying the same `Idempotency-Key` for the same sender transfer returns the original debit and credit and does not move money again.
+
 #### Errors
 
 - **400 Bad Request** — `amount` missing/zero/negative/invalid, `receiverWalletId` missing/invalid, same-wallet transfer, insufficient balance, or `Idempotency-Key` missing.
 - **401 Unauthorized** — `X-User-Id` header is missing or invalid.
 - **404 Not Found** — Sender or receiver wallet does not exist.
 - **500 Internal Server Error** — Unexpected server error. The whole operation is rolled back.
+
+### 5. Get Transaction History
+
+Returns the ledger history of a wallet owned by the authenticated user.
+
+- **Method:** `GET`
+- **URL:** `/wallets/{walletId}/transactions`
+
+#### Path Parameters
+
+- `walletId` (`Long`) — required
+
+#### Query Parameters
+
+| Parameter | Default | Description |
+| --------- | ------- | ----------- |
+| `page` | `0` | 0-based page index |
+| `size` | `20` | Page size, 1–100 |
+| `type` | omitted | Optional filter: `CREDIT` or `DEBIT` |
+| `sort` | `createdAt,desc` | `property,direction`. Allowed properties: `createdAt`, `amount`. Direction: `asc` or `desc` |
+
+#### Headers
+
+- `X-User-Id: <userId>` — required
+
+#### Success Response
+
+**200 OK**
+
+```json
+{
+  "content": [
+    {
+      "transactionId": 101,
+      "walletId": 1,
+      "type": "CREDIT",
+      "amount": 500.00,
+      "balanceAfter": 1500.00,
+      "referenceId": "DEP-20260826-0001",
+      "status": "COMPLETED",
+      "createdAt": "2026-08-26T10:30:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+#### Errors
+
+- **400 Bad Request** — Invalid `walletId`, `page`, `size`, `sort`, or `type`.
+- **401 Unauthorized** — `X-User-Id` header is missing or invalid.
+- **404 Not Found** — Wallet does not exist, or the user does not own this wallet.
+
+
+

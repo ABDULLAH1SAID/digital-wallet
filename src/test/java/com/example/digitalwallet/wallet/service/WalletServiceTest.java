@@ -67,7 +67,7 @@ class WalletServiceTest {
         User user = user(1L);
         when(userService.getUserById(1L)).thenReturn(user);
         when(walletRepository.existsByUserId(1L)).thenReturn(false);
-        when(walletRepository.save(any(Wallet.class))).thenAnswer(invocation -> {
+        when(walletRepository.saveAndFlush(any(Wallet.class))).thenAnswer(invocation -> {
             Wallet wallet = invocation.getArgument(0);
             ReflectionTestUtils.setField(wallet, "id", 10L);
             return wallet;
@@ -78,7 +78,7 @@ class WalletServiceTest {
         assertThat(response.getId()).isEqualTo(10L);
         assertThat(response.getUserId()).isEqualTo(1L);
         assertThat(response.getBalance()).isEqualByComparingTo("0");
-        verify(walletRepository).save(any(Wallet.class));
+        verify(walletRepository).saveAndFlush(any(Wallet.class));
     }
 
     @Test
@@ -88,7 +88,30 @@ class WalletServiceTest {
 
         assertThatThrownBy(() -> walletService.createWallet(1L))
                 .isInstanceOf(WalletAlreadyExistsException.class);
-        verify(walletRepository, never()).save(any());
+        verify(walletRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void createWallet_whenConcurrentDuplicate_throwsConflict() {
+        when(userService.getUserById(1L)).thenReturn(user(1L));
+        when(walletRepository.existsByUserId(1L)).thenReturn(false, true);
+        when(walletRepository.saveAndFlush(any(Wallet.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate user_id"));
+
+        assertThatThrownBy(() -> walletService.createWallet(1L))
+                .isInstanceOf(WalletAlreadyExistsException.class);
+    }
+
+    @Test
+    void createWallet_whenIntegrityErrorIsNotDuplicateWallet_rethrows() {
+        when(userService.getUserById(1L)).thenReturn(user(1L));
+        when(walletRepository.existsByUserId(1L)).thenReturn(false);
+        when(walletRepository.saveAndFlush(any(Wallet.class)))
+                .thenThrow(new DataIntegrityViolationException("unrelated constraint"));
+
+        assertThatThrownBy(() -> walletService.createWallet(1L))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("unrelated constraint");
     }
 
     @Test

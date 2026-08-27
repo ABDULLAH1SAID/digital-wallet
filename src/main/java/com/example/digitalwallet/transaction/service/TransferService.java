@@ -124,6 +124,7 @@ public class TransferService {
         credit.setCounterpartyWallet(sender);
         credit.setReferenceId(referenceId);
         credit.setStatus(TransactionStatus.COMPLETED);
+        credit.setOperation(TransactionOperation.TRANSFER);
 
         Transaction savedDebit = transactionRepository.saveAndFlush(debit);
         Transaction savedCredit = transactionRepository.saveAndFlush(credit);

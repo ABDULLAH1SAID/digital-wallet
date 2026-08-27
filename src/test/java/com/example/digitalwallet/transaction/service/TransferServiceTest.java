@@ -95,7 +95,7 @@ class TransferServiceTest {
         assertThat(debit.getOperation()).isEqualTo(TransactionOperation.TRANSFER);
         assertThat(debit.getIdempotencyKey()).isEqualTo("tx-1");
         assertThat(credit.getIdempotencyKey()).isNull();
-        assertThat(credit.getOperation()).isNull();
+        assertThat(credit.getOperation()).isEqualTo(TransactionOperation.TRANSFER);
     }
 
     @Test
