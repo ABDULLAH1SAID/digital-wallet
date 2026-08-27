@@ -57,10 +57,10 @@ public class WalletService {
     @Transactional(readOnly = true)
     public BalanceResponse getBalance(Long userId, Long walletId) {
         Wallet wallet = walletRepository.findById(walletId)
-                .orElseThrow(() -> new WalletNotFoundException(walletId));
+                .orElseThrow(() -> new WalletNotFoundException(walletId));   // 404
 
         if (!wallet.getUser().getId().equals(userId)) {
-            throw new WalletAccessDeniedException();
+            throw new WalletAccessDeniedException();                          // 403
         }
 
         return new BalanceResponse(wallet.getId(), wallet.getBalance());

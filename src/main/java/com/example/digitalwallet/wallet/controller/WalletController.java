@@ -34,6 +34,7 @@ public class WalletController {
         WalletResponse response = walletService.createWallet(userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
     @GetMapping("/{walletId}/balance")
     public ResponseEntity<BalanceResponse> getBalance(
             @PathVariable @Positive Long walletId,
