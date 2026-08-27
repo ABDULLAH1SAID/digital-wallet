@@ -395,9 +395,11 @@ For **all endpoints**, send the following header:
 X-User-Id: <userId>
 ```
 
-Missing, blank, non-numeric, or non-positive `X-User-Id` returns **401 Unauthorized**.
+Unknown user ids on `POST /wallets` return **401 Unauthorized** (`Invalid X-User-Id`), because a wallet can only be created for an existing user.
+On wallet operations (`GET /wallets/{id}/balance`, `POST /wallets/deposit`, `POST /transfers`, `GET /wallets/{id}/transactions`),
+an unknown user, a user with no wallet, a missing wallet, or a wallet owned by someone else all return **404 Not Found** (`WALLET_NOT_FOUND`).
+Ownership failures use `404` rather than `403` so wallet ids cannot be enumerated.
 
-Unknown user ids also return **401 Unauthorized** (`Invalid X-User-Id`).
 
 ## Error Response
 
