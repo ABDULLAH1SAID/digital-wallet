@@ -50,6 +50,12 @@ Start the Spring Boot application using Maven:
 mvn spring-boot:run
 ```
 
+Start the Spring Boot application using docker:
+
+```bash
+docker compose up
+```
+
 ### Run Tests
 
 Run the test suite using:
